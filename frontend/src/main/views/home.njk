@@ -1,0 +1,26 @@
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% extends "template.njk" %}
+
+{% block content %}
+  <h1 class="govuk-heading-xl">HMCTS Task Management System</h1>
+  
+  <p class="govuk-body-l">
+    Welcome to the caseworker task management system. Use this service to create and track tasks.
+  </p>
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h2 class="govuk-heading-m">Get started</h2>
+      <p class="govuk-body">
+        Create a new task to start tracking your casework activities.
+      </p>
+      
+      {{ govukButton({
+        text: "Create a new task",
+        href: "/tasks/create",
+        isStartButton: true
+      }) }}
+    </div>
+  </div>
+{% endblock %}

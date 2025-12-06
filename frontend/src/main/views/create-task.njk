@@ -1,0 +1,191 @@
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/date-input/macro.njk" import govukDateInput %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "macros/csrf.njk" import csrfProtection %}
+
+{% extends "template.njk" %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">Create a New Task</h1>
+      <p class="govuk-body-l">Use this form to create a new task for caseworkers to track their work.</p>
+
+      {% if success %}
+        {% set successHtml %}
+          <h3 class="govuk-notification-banner__heading">
+            Task created successfully
+          </h3>
+          <p class="govuk-body">Your task has been created and saved to the system.</p>
+        {% endset %}
+
+        {{ govukNotificationBanner({
+          type: "success",
+          html: successHtml
+        }) }}
+
+        <h2 class="govuk-heading-l">Task Details</h2>
+        {{ govukSummaryList({
+          rows: [
+            {
+              key: { text: "Task ID" },
+              value: { text: createdTask.id }
+            },
+            {
+              key: { text: "Title" },
+              value: { text: createdTask.title }
+            },
+            {
+              key: { text: "Description" },
+              value: { text: createdTask.description if createdTask.description else "No description provided" }
+            },
+            {
+              key: { text: "Status" },
+              value: { text: createdTask.status }
+            },
+            {
+              key: { text: "Due Date" },
+              value: { text: createdTask.formattedDueDate }
+            },
+            {
+              key: { text: "Created At" },
+              value: { text: createdTask.formattedCreatedAt }
+            }
+          ]
+        }) }}
+
+        <p class="govuk-body">
+          <a href="/tasks/create" class="govuk-link">Create another task</a>
+        </p>
+      {% else %}
+        {% if errors and errors.length > 0 %}
+          {{ govukErrorSummary({
+            titleText: "There is a problem",
+            errorList: errors
+          }) }}
+        {% endif %}
+
+        <form method="post" action="/tasks/create" novalidate>
+          {{ csrfProtection(csrfToken) }}
+
+          {{ govukInput({
+            label: {
+              text: "Task title",
+              classes: "govuk-label--m",
+              isPageHeading: false
+            },
+            hint: {
+              text: "Give your task a clear, descriptive title"
+            },
+            id: "title",
+            name: "title",
+            value: formData.title if formData else "",
+            errorMessage: { text: titleError } if titleError else null
+          }) }}
+
+          {{ govukTextarea({
+            label: {
+              text: "Description (optional)",
+              classes: "govuk-label--m"
+            },
+            hint: {
+              text: "Provide additional details about the task"
+            },
+            id: "description",
+            name: "description",
+            value: formData.description if formData else "",
+            rows: 5
+          }) }}
+
+          {{ govukSelect({
+            id: "status",
+            name: "status",
+            label: {
+              text: "Status",
+              classes: "govuk-label--m"
+            },
+            hint: {
+              text: "Select the current status of the task"
+            },
+            items: [
+              { value: "", text: "Select a status", selected: not formData.status },
+              { value: "PENDING", text: "Pending", selected: formData.status == "PENDING" },
+              { value: "IN_PROGRESS", text: "In Progress", selected: formData.status == "IN_PROGRESS" },
+              { value: "COMPLETED", text: "Completed", selected: formData.status == "COMPLETED" },
+              { value: "CANCELLED", text: "Cancelled", selected: formData.status == "CANCELLED" }
+            ],
+            errorMessage: { text: statusError } if statusError else null
+          }) }}
+
+          <div class="govuk-form-group {% if dueDateError %}govuk-form-group--error{% endif %}">
+            <fieldset class="govuk-fieldset" role="group" aria-describedby="due-date-hint">
+              <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
+                <h2 class="govuk-fieldset__heading">Due date and time</h2>
+              </legend>
+              <div id="due-date-hint" class="govuk-hint">
+                Enter the date and time when the task is due. The date must be in the future.
+              </div>
+              {% if dueDateError %}
+                <p id="due-date-error" class="govuk-error-message">
+                  <span class="govuk-visually-hidden">Error:</span> {{ dueDateError }}
+                </p>
+              {% endif %}
+              <div class="govuk-date-input" id="due-date">
+                <div class="govuk-date-input__item">
+                  <div class="govuk-form-group">
+                    <label class="govuk-label govuk-date-input__label" for="due-date-day">Day</label>
+                    <input class="govuk-input govuk-date-input__input govuk-input--width-2 {% if dueDateError %}govuk-input--error{% endif %}" 
+                           id="due-date-day" name="dueDateDay" type="text" inputmode="numeric"
+                           value="{{ formData.dueDateDay if formData else '' }}">
+                  </div>
+                </div>
+                <div class="govuk-date-input__item">
+                  <div class="govuk-form-group">
+                    <label class="govuk-label govuk-date-input__label" for="due-date-month">Month</label>
+                    <input class="govuk-input govuk-date-input__input govuk-input--width-2 {% if dueDateError %}govuk-input--error{% endif %}" 
+                           id="due-date-month" name="dueDateMonth" type="text" inputmode="numeric"
+                           value="{{ formData.dueDateMonth if formData else '' }}">
+                  </div>
+                </div>
+                <div class="govuk-date-input__item">
+                  <div class="govuk-form-group">
+                    <label class="govuk-label govuk-date-input__label" for="due-date-year">Year</label>
+                    <input class="govuk-input govuk-date-input__input govuk-input--width-4 {% if dueDateError %}govuk-input--error{% endif %}" 
+                           id="due-date-year" name="dueDateYear" type="text" inputmode="numeric"
+                           value="{{ formData.dueDateYear if formData else '' }}">
+                  </div>
+                </div>
+                <div class="govuk-date-input__item">
+                  <div class="govuk-form-group">
+                    <label class="govuk-label govuk-date-input__label" for="due-date-hour">Hour</label>
+                    <input class="govuk-input govuk-date-input__input govuk-input--width-2 {% if dueDateError %}govuk-input--error{% endif %}" 
+                           id="due-date-hour" name="dueDateHour" type="text" inputmode="numeric"
+                           value="{{ formData.dueDateHour if formData else '' }}" placeholder="00">
+                  </div>
+                </div>
+                <div class="govuk-date-input__item">
+                  <div class="govuk-form-group">
+                    <label class="govuk-label govuk-date-input__label" for="due-date-minute">Minute</label>
+                    <input class="govuk-input govuk-date-input__input govuk-input--width-2 {% if dueDateError %}govuk-input--error{% endif %}" 
+                           id="due-date-minute" name="dueDateMinute" type="text" inputmode="numeric"
+                           value="{{ formData.dueDateMinute if formData else '' }}" placeholder="00">
+                  </div>
+                </div>
+              </div>
+            </fieldset>
+          </div>
+
+          {{ govukButton({
+            text: "Create task",
+            type: "submit"
+          }) }}
+        </form>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
