@@ -43,7 +43,8 @@ public class TaskController {
     @PostMapping
     @Operation(
         summary = "Create a new task",
-        description = "Creates a new task for caseworkers with the provided details"
+        description = "Creates a new task for caseworkers with the provided details. "
+            + "Tasks cannot be created with due dates that fall on UK bank holidays."
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -56,7 +57,7 @@ public class TaskController {
         ),
         @ApiResponse(
             responseCode = "400",
-            description = "Invalid request - validation errors",
+            description = "Invalid request - validation errors or due date falls on a bank holiday",
             content = @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)

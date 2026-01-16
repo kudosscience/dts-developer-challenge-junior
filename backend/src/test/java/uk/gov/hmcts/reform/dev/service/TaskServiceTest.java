@@ -5,11 +5,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.hmcts.reform.dev.dto.CreateTaskRequest;
 import uk.gov.hmcts.reform.dev.dto.TaskResponse;
+import uk.gov.hmcts.reform.dev.exception.BankHolidayException;
 import uk.gov.hmcts.reform.dev.models.Task;
 import uk.gov.hmcts.reform.dev.models.TaskStatus;
 import uk.gov.hmcts.reform.dev.repository.TaskRepository;
@@ -19,7 +19,11 @@ import java.time.LocalDateTime;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -30,13 +34,16 @@ class TaskServiceTest {
     @Mock
     private TaskRepository taskRepository;
 
-    @InjectMocks
+    @Mock
+    private BankHolidayService bankHolidayService;
+
     private TaskService taskService;
 
     private LocalDateTime futureDate;
 
     @BeforeEach
     void setUp() {
+        taskService = new TaskService(taskRepository, bankHolidayService);
         futureDate = LocalDateTime.now().plusDays(7);
     }
 
@@ -61,6 +68,7 @@ class TaskServiceTest {
             .updatedAt(LocalDateTime.now())
             .build();
 
+        doNothing().when(bankHolidayService).validateNotBankHoliday(futureDate);
         when(taskRepository.save(any(Task.class))).thenReturn(savedTask);
 
         // When
@@ -73,6 +81,7 @@ class TaskServiceTest {
         assertEquals("Test Description", response.getDescription());
         assertEquals(TaskStatus.PENDING, response.getStatus());
         assertEquals(futureDate, response.getDueDate());
+        verify(bankHolidayService).validateNotBankHoliday(futureDate);
     }
 
     @Test
@@ -95,6 +104,7 @@ class TaskServiceTest {
             .updatedAt(LocalDateTime.now())
             .build();
 
+        doNothing().when(bankHolidayService).validateNotBankHoliday(futureDate);
         when(taskRepository.save(any(Task.class))).thenReturn(savedTask);
 
         // When
@@ -129,6 +139,7 @@ class TaskServiceTest {
             .updatedAt(LocalDateTime.now())
             .build();
 
+        doNothing().when(bankHolidayService).validateNotBankHoliday(futureDate);
         when(taskRepository.save(any(Task.class))).thenReturn(savedTask);
 
         // When
@@ -166,6 +177,7 @@ class TaskServiceTest {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
+            doNothing().when(bankHolidayService).validateNotBankHoliday(futureDate);
             when(taskRepository.save(any(Task.class))).thenReturn(savedTask);
 
             // When
@@ -174,5 +186,30 @@ class TaskServiceTest {
             // Then
             assertEquals(status, response.getStatus());
         }
+    }
+
+    @Test
+    @DisplayName("Should throw BankHolidayException when due date is on a bank holiday")
+    void shouldThrowBankHolidayExceptionWhenDueDateIsOnBankHoliday() {
+        // Given
+        LocalDateTime bankHolidayDate = LocalDateTime.of(2026, 4, 6, 10, 0); // Easter Monday 2026
+        CreateTaskRequest request = CreateTaskRequest.builder()
+            .title("Test Task")
+            .description("Test Description")
+            .status(TaskStatus.PENDING)
+            .dueDate(bankHolidayDate)
+            .build();
+
+        doThrow(new BankHolidayException("Easter Monday", "2026-04-06"))
+            .when(bankHolidayService).validateNotBankHoliday(bankHolidayDate);
+
+        // When & Then
+        BankHolidayException exception = assertThrows(BankHolidayException.class, () -> {
+            taskService.createTask(request);
+        });
+
+        assertEquals("Easter Monday", exception.getHolidayName());
+        assertEquals("2026-04-06", exception.getHolidayDate());
+        verify(taskRepository, never()).save(any(Task.class));
     }
 }

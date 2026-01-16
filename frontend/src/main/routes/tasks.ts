@@ -1,6 +1,12 @@
 import { Application, Request, Response } from 'express';
 import axios from 'axios';
 
+// Helper to get CSRF token safely
+const getCsrfToken = (req: Request): string => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (req as any).csrfToken?.() || '';
+};
+
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
 
 interface TaskFormData {
@@ -123,7 +129,7 @@ export default function (app: Application): void {
    */
   app.get('/tasks/create', (req: Request, res: Response) => {
     res.render('create-task', {
-      csrfToken: req.csrfToken?.() || ''
+      csrfToken: getCsrfToken(req)
     });
   });
 
@@ -147,7 +153,7 @@ export default function (app: Application): void {
 
     if (errors.length > 0) {
       return res.render('create-task', {
-        csrfToken: req.csrfToken?.() || '',
+        csrfToken: getCsrfToken(req),
         errors,
         titleError,
         statusError,
@@ -176,7 +182,7 @@ export default function (app: Application): void {
 
       // Render success page with task details
       res.render('create-task', {
-        csrfToken: req.csrfToken?.() || '',
+        csrfToken: getCsrfToken(req),
         success: true,
         createdTask: {
           ...createdTask,
@@ -199,7 +205,7 @@ export default function (app: Application): void {
       }
 
       res.render('create-task', {
-        csrfToken: req.csrfToken?.() || '',
+        csrfToken: getCsrfToken(req),
         errors: apiErrors,
         formData
       });

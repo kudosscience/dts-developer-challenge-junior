@@ -42,6 +42,24 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles bank holiday validation exceptions.
+     *
+     * @param ex the bank holiday exception
+     * @return error response with bank holiday details
+     */
+    @ExceptionHandler(BankHolidayException.class)
+    public ResponseEntity<ErrorResponse> handleBankHolidayException(BankHolidayException ex) {
+        ErrorResponse errorResponse = ErrorResponse.builder()
+            .status(HttpStatus.BAD_REQUEST.value())
+            .message("Task cannot be created on a bank holiday")
+            .errors(List.of(ex.getMessage()))
+            .timestamp(LocalDateTime.now())
+            .build();
+
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
      * Handles generic exceptions.
      *
      * @param ex the exception
